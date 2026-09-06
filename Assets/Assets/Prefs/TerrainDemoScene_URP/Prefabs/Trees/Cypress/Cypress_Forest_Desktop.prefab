@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 3421862761510314383}
   - component: {fileID: 3145729420582536788}
   - component: {fileID: 5247040574106671307}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Cypress_Forest_Desktop_LOD0
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -62,6 +62,8 @@ MeshRenderer:
   m_RayTracingAccelStructBuildFlagsOverride: 0
   m_RayTracingAccelStructBuildFlags: 1
   m_SmallMeshCulling: 1
+  m_ForceMeshLod: -1
+  m_MeshLodSelectionBias: 0
   m_RenderingLayerMask: 257
   m_RendererPriority: 0
   m_Materials:
@@ -84,9 +86,11 @@ MeshRenderer:
   m_AutoUVMaxDistance: 0.5
   m_AutoUVMaxAngle: 89
   m_LightmapParameters: {fileID: 0}
+  m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
+  m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
 --- !u!193 &5247040574106671307
 Tree:
@@ -109,7 +113,7 @@ GameObject:
   - component: {fileID: 1235947750745287928}
   - component: {fileID: 2502640412902653883}
   - component: {fileID: 3737558263983317169}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Cypress_Forest_Desktop_LOD1
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -159,6 +163,8 @@ MeshRenderer:
   m_RayTracingAccelStructBuildFlagsOverride: 0
   m_RayTracingAccelStructBuildFlags: 1
   m_SmallMeshCulling: 1
+  m_ForceMeshLod: -1
+  m_MeshLodSelectionBias: 0
   m_RenderingLayerMask: 257
   m_RendererPriority: 0
   m_Materials:
@@ -170,7 +176,7 @@ MeshRenderer:
   m_StaticBatchRoot: {fileID: 0}
   m_ProbeAnchor: {fileID: 6783456738271626150}
   m_LightProbeVolumeOverride: {fileID: 0}
-  m_ScaleInLightmap: 0.7094526
+  m_ScaleInLightmap: 0.31399384
   m_ReceiveGI: 1
   m_PreserveUVs: 0
   m_IgnoreNormalsForChartDetection: 0
@@ -181,9 +187,11 @@ MeshRenderer:
   m_AutoUVMaxDistance: 0.5
   m_AutoUVMaxAngle: 89
   m_LightmapParameters: {fileID: 0}
+  m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
+  m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
 --- !u!193 &3737558263983317169
 Tree:
@@ -203,7 +211,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 6783456738271626150}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Cypress_Forest_Desktop_Anchor
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -237,7 +245,7 @@ GameObject:
   - component: {fileID: 5049103769433895827}
   - component: {fileID: 6144619509121006690}
   - component: {fileID: 1133709869104085447}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Cypress_Forest_Desktop_LOD2
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -287,6 +295,8 @@ MeshRenderer:
   m_RayTracingAccelStructBuildFlagsOverride: 0
   m_RayTracingAccelStructBuildFlags: 1
   m_SmallMeshCulling: 1
+  m_ForceMeshLod: -1
+  m_MeshLodSelectionBias: 0
   m_RenderingLayerMask: 257
   m_RendererPriority: 0
   m_Materials:
@@ -298,7 +308,7 @@ MeshRenderer:
   m_StaticBatchRoot: {fileID: 0}
   m_ProbeAnchor: {fileID: 6783456738271626150}
   m_LightProbeVolumeOverride: {fileID: 0}
-  m_ScaleInLightmap: 0.37787324
+  m_ScaleInLightmap: 0.2112396
   m_ReceiveGI: 1
   m_PreserveUVs: 0
   m_IgnoreNormalsForChartDetection: 0
@@ -309,9 +319,11 @@ MeshRenderer:
   m_AutoUVMaxDistance: 0.5
   m_AutoUVMaxAngle: 89
   m_LightmapParameters: {fileID: 0}
+  m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
+  m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
 --- !u!193 &1133709869104085447
 Tree:
@@ -333,7 +345,8 @@ GameObject:
   - component: {fileID: 6870223390090205981}
   - component: {fileID: 1805363375214341228}
   - component: {fileID: 641972081241640202}
-  m_Layer: 0
+  - component: {fileID: -6611498180934784384}
+  m_Layer: 6
   m_Name: Cypress_Forest_Desktop
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -367,30 +380,31 @@ LODGroup:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6060788920606015911}
-  serializedVersion: 2
+  serializedVersion: 3
   m_LocalReferencePoint: {x: -0.13364053, y: 3.5692868, z: 0.20043993}
   m_Size: 7.267743
   m_FadeMode: 1
   m_AnimateCrossFading: 1
   m_LastLODIsBillboard: 1
   m_LODs:
-  - screenRelativeHeight: 0.31399384
+  - screenRelativeHeight: 0.700236
     fadeTransitionWidth: 0
     renderers:
     - renderer: {fileID: 3145729420582536788}
-  - screenRelativeHeight: 0.2112396
+  - screenRelativeHeight: 0.42872268
     fadeTransitionWidth: 0
     renderers:
     - renderer: {fileID: 2502640412902653883}
-  - screenRelativeHeight: 0.12870532
+  - screenRelativeHeight: 0.26922634
     fadeTransitionWidth: 0
     renderers:
     - renderer: {fileID: 6144619509121006690}
-  - screenRelativeHeight: 0.01730159
+  - screenRelativeHeight: 0.14495909
     fadeTransitionWidth: 0
     renderers:
     - renderer: {fileID: 5143404626291782099}
   m_Enabled: 1
+  m_GlobalIlluminationLOD: 0
 --- !u!65 &641972081241640202
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -412,6 +426,23 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.5083009, y: 2.1561992, z: 0.567683}
   m_Center: {x: -0.04917404, y: 0.99030817, z: 0.005027811}
+--- !u!114 &-6611498180934784384
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6060788920606015911}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 35e95dc5ff2b64380880dd7ac5922847, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.AI.Navigation::Unity.AI.Navigation.NavMeshModifierVolume
+  m_SerializedVersion: 0
+  m_Size: {x: 4, y: 3, z: 4}
+  m_Center: {x: 0, y: 1, z: 0}
+  m_Area: 1
+  m_AffectedAgents: ffffffff
 --- !u!1 &6272038357832284317
 GameObject:
   m_ObjectHideFlags: 0
@@ -424,7 +455,7 @@ GameObject:
   - component: {fileID: 1337209908228631835}
   - component: {fileID: 5143404626291782099}
   - component: {fileID: 8164048133800999252}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Cypress_Forest_Desktop_LOD3
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -474,6 +505,8 @@ MeshRenderer:
   m_RayTracingAccelStructBuildFlagsOverride: 0
   m_RayTracingAccelStructBuildFlags: 1
   m_SmallMeshCulling: 1
+  m_ForceMeshLod: -1
+  m_MeshLodSelectionBias: 0
   m_RenderingLayerMask: 257
   m_RendererPriority: 0
   m_Materials:
@@ -484,7 +517,7 @@ MeshRenderer:
   m_StaticBatchRoot: {fileID: 0}
   m_ProbeAnchor: {fileID: 6783456738271626150}
   m_LightProbeVolumeOverride: {fileID: 0}
-  m_ScaleInLightmap: 0.048200324
+  m_ScaleInLightmap: 0.12870532
   m_ReceiveGI: 1
   m_PreserveUVs: 0
   m_IgnoreNormalsForChartDetection: 0
@@ -495,9 +528,11 @@ MeshRenderer:
   m_AutoUVMaxDistance: 0.5
   m_AutoUVMaxAngle: 89
   m_LightmapParameters: {fileID: 0}
+  m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
+  m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
 --- !u!193 &8164048133800999252
 Tree:

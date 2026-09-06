@@ -14,6 +14,7 @@ using DG.Tweening;
 
 public class Creature : MonoBehaviour
 {
+    [SerializeField] private bool Dummy;
     //Stats
     [Header("Serialize")]
     [SerializeField] private Rigidbody rb;
@@ -110,22 +111,25 @@ public class Creature : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (target == null && WalkPoints.Count == 0 && InFight == false)
+        if (!Dummy)
         {
-            rb.linearVelocity = Vector3.zero;
+            if (target == null && WalkPoints.Count == 0 && InFight == false)
+            {
+                rb.linearVelocity = Vector3.zero;
+            }
+            if (hp > 0 && !isDead)
+            {
+                Vector3 horisontalVelocity = new Vector3(rb.linearVelocity.x, 0, rb.linearVelocity.z);
+                animator.SetFloat("speed", horisontalVelocity.magnitude);
+
+
+                KdControl();
+                Actions();
+                }
         }
-        if (hp > 0 && !isDead)
-        {
-            Vector3 horisontalVelocity = new Vector3(rb.linearVelocity.x, 0, rb.linearVelocity.z);
-            animator.SetFloat("speed", horisontalVelocity.magnitude);
-
-
-            KdControl();
-            Actions();
-
-            hpBarController.UpdateStamina(currentStamina, maxStamina);
-            hpBarController.UpdateHp(hp, maxHp);
-        }
+        hpBarController.UpdateStamina(currentStamina, maxStamina);
+        hpBarController.UpdateHp(hp, maxHp);
+            
     }
     //attack
     private void Actions()

@@ -190,6 +190,9 @@ PrefabInstance:
       insertIndex: -1
       addedObject: {fileID: 8877216319164120280}
     m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 100000, guid: 0347a2ca593e212468d38a00c0f15925, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: -7049964204339518700}
     - targetCorrespondingSourceObject: {fileID: 100002, guid: 0347a2ca593e212468d38a00c0f15925, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1422072332824408386}
@@ -226,3 +229,28 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: 4300004, guid: 0347a2ca593e212468d38a00c0f15925, type: 3}
+--- !u!1 &6179546325909802286 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 100000, guid: 0347a2ca593e212468d38a00c0f15925, type: 3}
+  m_PrefabInstance: {fileID: 6179546325909834638}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &-7049964204339518700
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6179546325909802286}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1e3fdca004f2d45fe8abbed571a8abd5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.AI.Navigation::Unity.AI.Navigation.NavMeshModifier
+  m_SerializedVersion: 0
+  m_OverrideArea: 1
+  m_Area: 1
+  m_OverrideGenerateLinks: 0
+  m_GenerateLinks: 0
+  m_IgnoreFromBuild: 0
+  m_ApplyToChildren: 1
+  m_AffectedAgents: ffffffff

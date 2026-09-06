@@ -56,7 +56,7 @@ public class PlayerControl : MonoBehaviour
     public int Intelligence; // Mage Damage
 
     public int level;
-    [SerializeField] private TextMeshProUGUI levelIconText;
+    [SerializeField] private TextMeshPro levelIconText;
     public int currentExp;
     public float maxExp;
     public int levelPoints;
@@ -79,7 +79,7 @@ public class PlayerControl : MonoBehaviour
     private Vector3 PlayerDirection;
     public Vector3? ViewPointAfterMove;
 
-    private Vector3 rot;
+    private Quaternion rot;
     private Vector3 isRot;
 
     public GameObject _TargetPointCircle;
@@ -94,19 +94,21 @@ public class PlayerControl : MonoBehaviour
     public bool isSelected;
 
     public UnityEngine.UI.Image currentActivityImage;
+    [SerializeField] private Sprite baseActivityImage;
     [SerializeField] private Sprite attackSprite;
     
 
     public GameObject bodyBag;
     public Renderer bodyBagRender;
 
-    //attack
+    [Header("Attack")]
     private int Damage;
     private bool IsAttacking = false;
     private bool attack;
     public float AttackDistance;
     [SerializeField] private float handAttackDistance;
-    [SerializeField] private float HandAttackDuration;
+    [SerializeField] private float HandAttackDurationBefore;
+    [SerializeField] private float HandAttackDurationAfter;
     [SerializeField] private int handDamage;
     [SerializeField] private bool dealDamage = false;
 
@@ -161,7 +163,7 @@ public class PlayerControl : MonoBehaviour
 
     [Header("Spells")]
     public Creature spellTarget;
-    public SpriteRenderer SpellRadiusCircle;
+    public ProBuilderMesh SpellRadiusCircle;
     public Coroutine CastingSpellCour;
 
     public List<int> SkillActivated;
@@ -179,6 +181,9 @@ public class PlayerControl : MonoBehaviour
     public bool isMove = false;
 
     public float speed;
+
+    public float maxTimer = 0.3f;
+    private float timer = 0;
 
     private void Awake()
     {
@@ -200,11 +205,18 @@ public class PlayerControl : MonoBehaviour
         //rb.AddForce(new Vector3(0, _GravityModifier, 0), ForceMode.Force);
         if (!isMove && EnemyTarget == null && agent.hasPath == false && agent.pathPending == false)
         {
-            StopMovement();
+            //StopMovement();
+            //Debug.Log("2s");
         }
+        //if (agent.hasPath || agent.pathPending)
+        //{
+        //    Debug.Log("У агента ЕСТЬ путь");
+        //}
+        //else
+        //{
+        //    Debug.Log("У агента НЕТ пути");
+        //}
     }
-
-
     // Update is called once per frame
     void Update()
     {
@@ -221,17 +233,18 @@ public class PlayerControl : MonoBehaviour
             ViewPointAfterMove = null;
             if (AttackDistance < Vector3.Distance(gameObject.transform.position, EnemyTarget.transform.position)-dop)
             {
-                dop = 0f;
-                Vector3 direction = (EnemyTarget.transform.position - transform.position).normalized;
-                direction.y = 0;
-                
-                rb.linearVelocity = direction * _Speed;
+                timer += Time.deltaTime;
+                if (timer > maxTimer)
+                {
+                    agent.SetDestination(EnemyTarget.transform.position);
+                    timer = 0f;
+                }
             }
             else if (AttackDistance > Vector3.Distance(gameObject.transform.position, EnemyTarget.transform.position)-dop)
             {
                 dop = 0.2f;
                 rb.angularVelocity = Vector3.zero;
-                rb.linearVelocity = Vector3.zero;
+                agent.ResetPath();
                 if (currentStamina <= 0.01f && !IsAttacking)
                 {
                     StartCoroutine(Attack(Damage));
@@ -244,9 +257,14 @@ public class PlayerControl : MonoBehaviour
 
             Vector3 direction = (agent.destination - transform.position).normalized;
             direction.y = 0;
-            rb.linearVelocity = direction * _Speed;
             if (Vector3.Distance(transform.position, new Vector3(agent.destination.x, transform.position.y, agent.destination.z)) < _DistanceToStop)
             {
+                if (ViewPointAfterMove != null)
+                {
+                    Vector3 PlayerDirection = (ViewPointAfterMove.Value - transform.position);
+                    PlayerDirection = new Vector3(PlayerDirection.x, 0, PlayerDirection.z).normalized;
+                    StartCoroutine(LookAtPoint(PlayerDirection));
+                }
                 _TargetPointCircle.SetActive(false);
                 agent.ResetPath();
                 rb.linearVelocity = new Vector3(0, 0, 0);
@@ -255,16 +273,19 @@ public class PlayerControl : MonoBehaviour
         else if (TalkTargetControl != null)
         {
             isMove = true;
-            
 
-            Vector3 direction = (TalkTargetControl.transform.position - transform.position).normalized;
-            direction.y = 0;
-            rb.linearVelocity = direction * _Speed;
+            timer += Time.deltaTime;
+            if (timer > maxTimer)
+            {
+                agent.SetDestination(TalkTargetControl.transform.position);
+                timer = 0f;
+            }
             if (Vector3.Distance(transform.position, new Vector3(TalkTargetControl.transform.position.x, transform.position.y, TalkTargetControl.gameObject.transform.position.z)) < _DistanceToTalk)
             {
                 uiController.OpenDialog(TalkTargetControl);
                 Debug.Log("Talk");
                 TalkTargetControl = null;
+                agent.ResetPath();
                 rb.linearVelocity = new Vector3(0, 0, 0);
             }
         }
@@ -272,11 +293,15 @@ public class PlayerControl : MonoBehaviour
         {
             isMove = true;
 
-            Vector3 direction = (LootTarget.transform.position - transform.position).normalized;
-            direction.y = 0;
-            rb.linearVelocity = direction * _Speed;
+            timer += Time.deltaTime;
+            if (timer > maxTimer)
+            {
+                agent.SetDestination(LootTarget.transform.position);
+                timer = 0f;
+            }
             if (Vector3.Distance(transform.position, new Vector3(LootTarget.transform.position.x, transform.position.y, LootTarget.transform.position.z)) < _DistanceToLoot)
             {
+                agent.ResetPath();
                 rb.linearVelocity = Vector3.zero;
                 uiController.OpenLootMenu(LootTarget);
                 LootTarget = null;
@@ -291,10 +316,16 @@ public class PlayerControl : MonoBehaviour
             DirectionCircleControl();
         }
     }
+    private IEnumerator LookAtPoint(Vector3 pos)
+    {
+        yield return
+        ViewPointAfterMove = null;
+    }
     public void enemyDied()
     {
         EnemyTarget = null;
         rb.linearVelocity = Vector3.zero;
+        agent.ResetPath();
     }
 
 
@@ -341,11 +372,8 @@ public class PlayerControl : MonoBehaviour
         }
     }
 
-
-
     public void updateArmorStats()
     {
-
         animator.SetBool("Bow", false);
         animator.SetBool("Sword", false);
         animator.SetBool("RangeStaff", false);
@@ -454,6 +482,7 @@ public class PlayerControl : MonoBehaviour
     {
         rb.linearVelocity = Vector3.zero;
         rb.angularVelocity = Vector3.zero;
+        agent.ResetPath();
     }
     private IEnumerator WaitSomeSec(float time)
     {
@@ -463,8 +492,8 @@ public class PlayerControl : MonoBehaviour
     //Animation Control
     private void AnimationControl()
     {
-        Vector3 horisontalVelocity = new Vector3(rb.linearVelocity.x, 0, rb.linearVelocity.z);
-        animator.SetFloat("speed", horisontalVelocity.magnitude);
+        animator.SetFloat("speed", agent.velocity.magnitude);
+        
     }
 
     //rotate control
@@ -474,50 +503,47 @@ public class PlayerControl : MonoBehaviour
         {
             PlayerDirection = (EnemyTarget.transform.position - transform.position);
             PlayerDirection = new Vector3(PlayerDirection.x, 0, PlayerDirection.z).normalized;
-            transform.rotation = Quaternion.LookRotation(PlayerDirection);
+            Quaternion look = Quaternion.LookRotation(PlayerDirection);
+            transform.rotation = Quaternion.RotateTowards(transform.rotation, look, 720f * Time.deltaTime);
         }
         else if (CastingSpellCour != null)
         {
             PlayerDirection = new Vector3(spellPos.x, transform.position.y, spellPos.z) - transform.position;
-            transform.rotation = Quaternion.LookRotation(PlayerDirection);
-            rot = PlayerDirection;
+            Quaternion look = Quaternion.LookRotation(PlayerDirection);
+            transform.rotation = Quaternion.RotateTowards(transform.rotation, look, 720f * Time.deltaTime);
+            Debug.Log("ROTATE");
         }
         else if (TalkTargetControl != null)
         {
             
             PlayerDirection = (TalkTargetControl.transform.position - transform.position);
             PlayerDirection = new Vector3(PlayerDirection.x, 0, PlayerDirection.z).normalized;
-            transform.rotation = Quaternion.LookRotation(PlayerDirection);
+            Quaternion look = Quaternion.LookRotation(PlayerDirection);
             agent.ResetPath();
             ViewPointAfterMove = null;
-            rot = PlayerDirection;
+            transform.rotation = Quaternion.RotateTowards(transform.rotation, look, 720f * Time.deltaTime);
         }
-        else if (agent.pathPending || agent.hasPath || ViewPointAfterMove != null)
-        {
+        //else if (agent.pathPending || agent.hasPath || ViewPointAfterMove != null)
+        //{
 
-            //if (agent.hasPath || agent.pathPending)
-            //{
-            //    PlayerDirection = (agent.destination - transform.position);
-            //    PlayerDirection = new Vector3(PlayerDirection.x, 0, PlayerDirection.z).normalized;
-            //    rot = PlayerDirection;
-            //}
-            if (ViewPointAfterMove != null)
-            {
-                PlayerDirection = (ViewPointAfterMove.Value - transform.position);
-                PlayerDirection = new Vector3(PlayerDirection.x, 0, PlayerDirection.z).normalized;
-                rot = PlayerDirection;
-            }
+        //    if (agent.hasPath || agent.pathPending)
+        //    {
+        //        PlayerDirection = (agent.destination - transform.position);
+        //        PlayerDirection = new Vector3(PlayerDirection.x, 0, PlayerDirection.z).normalized;
+        //        rot = PlayerDirection;
+        //    }
+        //    else if (ViewPointAfterMove != null)
+        //    {
+        //        PlayerDirection = (ViewPointAfterMove.Value - transform.position);
+        //        PlayerDirection = new Vector3(PlayerDirection.x, 0, PlayerDirection.z).normalized;
+        //        rot = PlayerDirection;
+        //    }
 
-            transform.rotation = Quaternion.LookRotation(PlayerDirection);
+        //    transform.rotation = Quaternion.LookRotation(PlayerDirection);
 
 
 
-        }
-
-        else if (rot != Vector3.zero)
-        {
-            transform.rotation = Quaternion.LookRotation(rot);
-        }
+        //}
 
     }
     
@@ -578,10 +604,13 @@ public class PlayerControl : MonoBehaviour
     //spell
     public void TryCast(Spell spell, Vector3 CursorPosition, PlayerControl pl = null, Creature cr = null, Transform SpellTransform = null)
     {
+        agent.updateRotation = false;
         currentActivityImage.sprite = spell.Icon;
         if (CastingSpellCour != null)
         {
             StopCoroutine(CastingSpellCour);
+            CastingSpellCour = null;
+            animator.SetFloat("SpellCast", 0);
         }
         if (AttackingCour != null)
         {
@@ -602,7 +631,7 @@ public class PlayerControl : MonoBehaviour
         //     if (spell.SpellCastAnimation) { animator.SetFloat("SpellCast", 1); }
         //else { animator.SetFloat("Attack", 1); }
         //else { animator.SetFloat("Attack", 1); }
-        yield return new WaitForSeconds(1.05f);
+        yield return new WaitForSeconds(0.18f);
         List<GameObject> spellObjects = new List<GameObject> { };
         int cnt = 0;
         if (SpellTransform !=  null)
@@ -612,6 +641,7 @@ public class PlayerControl : MonoBehaviour
                 if (!SpellTransform.GetChild(i).gameObject.activeInHierarchy)
                 {
                     spellObjects.Add(SpellTransform.GetChild(i).gameObject);
+                    Debug.Log(SpellTransform.GetChild(i).name);
                     cnt++;
                 }
             }
@@ -644,20 +674,23 @@ public class PlayerControl : MonoBehaviour
                 foreach (GameObject obj in spellObjects)
                 {
                     DirectedSpell dirSpell = obj.GetComponent<DirectedSpell>();
+                    if (dirSpell == null) { Debug.Log("DIRRR"); }
                     dirSpell.targetCreature = cr;
                     dirSpell.targerPlayer = pl;
                     dirSpell.playerInt = Intelligence + buffIntelligence;
                     dirSpell.playerStr = Strength + buffStrength;
-                    obj.transform.position = transform.position;
-                    obj.SetActive(true);
+                    dirSpell.gameObject.transform.position = transform.position;
+                    dirSpell.gameObject.SetActive(true);
                 }
             }
         }
+        yield return new WaitForSeconds(1.05f-0.18f);
         currentStamina = maxStamina;
         CastingSpellCour = null;
         animator.SetFloat("SpellCast", 0);
-        currentActivityImage.sprite = null;
+        currentActivityImage.sprite = baseActivityImage;
         CastingSpellCour = null;
+        agent.updateRotation = true;
     }
     //mele
     public void TryMele(GameObject SpellObj, float KastTimer, float KdAfterSpell, bool CastAtPoint, Vector3 CursorPosition)
@@ -666,6 +699,8 @@ public class PlayerControl : MonoBehaviour
         if (CastingSpellCour != null)
         {
             StopCoroutine(CastingSpellCour);
+            CastingSpellCour = null;
+            animator.SetFloat("SpellCast", 0);
         }
         if (AttackingCour != null)
         {
@@ -685,9 +720,13 @@ public class PlayerControl : MonoBehaviour
         Debug.Log("Attack");
         IsAttacking = true;// dealDamage = false;
         //yield return new WaitUntil(()=> dealDamage);
-        yield return new WaitForSeconds(Weapon.AttackDurationBefore);
-        EnemyTarget.DamageTake(damage + (Strength+Dexterity+buffStrength+buffDexterity)*0.5f, true, this);
-        yield return new WaitForSeconds(Weapon.AttackDurationAfter);
+        if (Weapon)
+        { yield return new WaitForSeconds(Weapon.AttackDurationBefore); }
+        else { yield return new WaitForSeconds(HandAttackDurationBefore); }
+        EnemyTarget.DamageTake(damage + (Strength + Dexterity + buffStrength + buffDexterity) * 0.5f, true, this);
+        if (Weapon)
+        { yield return new WaitForSeconds(Weapon.AttackDurationAfter); }
+        else { yield return new WaitForSeconds(HandAttackDurationAfter); }
         IsAttacking = false;
 
         currentStamina = maxStamina;
@@ -735,11 +774,11 @@ public class PlayerControl : MonoBehaviour
         Vector3 FinalTarget = pos;
         RaycastHit hit;
 
-
+        agent.SetDestination(pos);
         ViewPointAfterMove = ViewPos;
         if (!IsEnemy)
         {
-            _TargetPointCircle.transform.position = new Vector3(pos.x, pos.y + 0.1f, pos.z);
+            _TargetPointCircle.transform.position = new Vector3(pos.x, pos.y + 0.05f, pos.z);
             _TargetPointCircle.SetActive(true);
         }
     }

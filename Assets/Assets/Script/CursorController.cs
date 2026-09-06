@@ -77,8 +77,8 @@ public class CursorController : MonoBehaviour
     //PrepearedSkill
     [Header("Prepeared Skill")]
     [SerializeField] private Spell spell;
-
-    private Transform[] SpellTransforms;
+    [SerializeField] private Transform SpellTransform;
+    [SerializeField] private List<Transform> SpellTransforms =new List<Transform>();
     public float expMulti;
 
     [Header("layers")]
@@ -108,6 +108,9 @@ public class CursorController : MonoBehaviour
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     private void Awake()
     {
+     
+        foreach (Transform tr in SpellTransform)
+        { SpellTransforms.Add(tr.transform); }
         CurrentPlayer = GameObject.Find("Player");
         CurrentPlayerRb = CurrentPlayer.GetComponent<Rigidbody>();
         CurrentPlayerContr = CurrentPlayer.GetComponent<PlayerControl>();
@@ -258,19 +261,6 @@ public class CursorController : MonoBehaviour
                     Debug.Log("Stats");
                 }
             }
-            //Если готовится заклинание
-            else if (PrepearingCastSpell && Groundhit.collider != null && isGround)
-            {
-                //CurrentPlayerContr.TargetPositions = new Vector3[0];
-                CurrentPlayerContr.agent.ResetPath();
-                CurrentPlayerContr.EnemyTarget = null;
-                CurrentPlayerContr.ViewPointAfterMove = null;
-                CurrentPlayerContr.spellPos = Groundhit.point;
-                if (CurrentPlayerContr)
-                    CurrentPlayerContr.TryCast(spell, Groundhit.point, null, null, SpellTransforms[spell.SpellTransformIndex]);
-                PrepearingCastSpell = false;
-                DragSpellObj.SetActive(false);
-            }
             //Клик на существо
             else if (TOFhit.collider != null && isTOF)
             {
@@ -281,6 +271,7 @@ public class CursorController : MonoBehaviour
                     {
                         PlayerControl pl = TOFhit.collider.GetComponentInParent<PlayerControl>();
                         CurrentPlayerContr.TryCast(spell, Vector3.zero, pl, null, SpellTransforms[spell.SpellTransformIndex]);
+                        CurrentPlayerContr.spellPos = pl.transform.position;
                         PrepearingCastSpell = false;
 
                     }
@@ -320,6 +311,7 @@ public class CursorController : MonoBehaviour
                         if (PrepearingCastSpell)
                         {
                             CurrentPlayerContr.TryCast(spell, Vector3.zero, null, creature, SpellTransforms[spell.SpellTransformIndex]);
+                            CurrentPlayerContr.spellPos = creature.transform.position;
                             PrepearingCastSpell = false;
                         }
                         else
@@ -370,6 +362,22 @@ public class CursorController : MonoBehaviour
 
 
             }
+            //Если готовится заклинание
+            else if (PrepearingCastSpell && Groundhit.collider != null && isGround && !spell.CastDirected)
+            {
+                //CurrentPlayerContr.TargetPositions = new Vector3[0];
+                CurrentPlayerContr.agent.ResetPath();
+                CurrentPlayerContr.EnemyTarget = null;
+                CurrentPlayerContr.ViewPointAfterMove = null;
+                CurrentPlayerContr.spellPos = Groundhit.point;
+                if (CurrentPlayerContr)
+                    CurrentPlayerContr.TryCast(spell, Groundhit.point, null, null, SpellTransforms[spell.SpellTransformIndex]);
+                PrepearingCastSpell = false;
+                if (DragSpellObj)
+                { DragSpellObj.SetActive(false); }
+                DragSpellObj = null;
+            }
+            //клик на землю
             else if (Groundhit.collider != null && isGround)
             {
                 if (CurrentPlayerContr != null)
@@ -378,6 +386,8 @@ public class CursorController : MonoBehaviour
                     {
                         CurrentPlayerContr.animator.SetBool("SpellPrepare", false);
                         StopCoroutine(CurrentPlayerContr.CastingSpellCour);
+                        CurrentPlayerContr.CastingSpellCour = null;
+                        CurrentPlayerContr.animator.SetFloat("SpellCast", 0);
                     }
                 }
                 if (Groundhit.collider.CompareTag("CantMoveHere"))
@@ -389,6 +399,7 @@ public class CursorController : MonoBehaviour
                     foreach (PlayerControl control in selectedTeam)
                     {
                         control._TargetPointCircle.SetActive(true);
+                        control.agent.updateRotation = true;
                         //Если персонаж готовит заклинание/бЪёт то отключаем корутину
                         if (control.AttackingCour != null)
                         {
@@ -397,6 +408,8 @@ public class CursorController : MonoBehaviour
                         if (CurrentPlayerContr.CastingSpellCour != null)
                         {
                             StopCoroutine(control.CastingSpellCour);
+                            control.CastingSpellCour = null;
+                            control.animator.SetFloat("SpellCast", 0);
                         }
 
                     }
@@ -434,6 +447,7 @@ public class CursorController : MonoBehaviour
                 CurrentPlayerContr.animator.SetBool("SpellPrepare", false);
                 CurrentPlayerContr.animator.SetFloat("SpellCast", 0);
                 DragSpellObj.SetActive(false);
+                DragSpellObj = null;
 
             }
             //проверка на нажатие ui
@@ -488,13 +502,23 @@ public class CursorController : MonoBehaviour
                 }
                 else
                 {
-                    if (CurrentPlayerContr.AttackingCour != null)
+
+                    foreach (PlayerControl control in selectedTeam)
                     {
-                        StopCoroutine(CurrentPlayerContr.AttackingCour);
-                    }
-                    if (CurrentPlayerContr.CastingSpellCour != null)
-                    {
-                        StopCoroutine(CurrentPlayerContr.CastingSpellCour);
+                        control._TargetPointCircle.SetActive(true);
+                        control.agent.updateRotation = true;
+                        //Если персонаж готовит заклинание/бЪёт то отключаем корутину
+                        if (control.AttackingCour != null)
+                        {
+                            StopCoroutine(control.AttackingCour);
+                        }
+                        if (CurrentPlayerContr.CastingSpellCour != null)
+                        {
+                            StopCoroutine(control.CastingSpellCour);
+                            control.CastingSpellCour = null;
+                            control.animator.SetFloat("SpellCast", 0);
+                        }
+
                     }
 
                     CurrentPlayerContr.EnemyTarget = null;
@@ -617,21 +641,24 @@ public class CursorController : MonoBehaviour
     {
         if (PrepearingCastSpell)
         {
-            Ray gr = Camera.main.ScreenPointToRay(Input.mousePosition);
-            RaycastHit hit;
-            bool isHit = Physics.Raycast(gr, out hit, Mathf.Infinity, GroundLayer);
-
-            if (isHit == true && hit.collider != null)
+            if (DragSpellObj != null)
             {
-                if (spell.CastAtPoint)
+                Ray gr = Camera.main.ScreenPointToRay(Input.mousePosition);
+                RaycastHit hit;
+                bool isHit = Physics.Raycast(gr, out hit, Mathf.Infinity, GroundLayer);
+
+                if (isHit == true && hit.collider != null)
                 {
-                    DragSpellObj.transform.position = hit.point;
-                }
-                else
-                {
-                    DragSpellObj.transform.position = CurrentPlayer.transform.position;
-                    DragSpellObj.transform.LookAt(hit.point);
-                    DragSpellObj.transform.rotation = Quaternion.Euler(0, 180+DragSpellObj.transform.eulerAngles.y, 0);
+                    if (spell.CastAtPoint)
+                    {
+                        DragSpellObj.transform.position = hit.point;
+                    }
+                    else
+                    {
+                        DragSpellObj.transform.position = CurrentPlayer.transform.position;
+                        DragSpellObj.transform.LookAt(hit.point);
+                        DragSpellObj.transform.rotation = Quaternion.Euler(0, 180 + DragSpellObj.transform.eulerAngles.y, 0);
+                    }
                 }
             }
         }
@@ -639,13 +666,14 @@ public class CursorController : MonoBehaviour
     public void PrepareSpell(Spell spell)
     {
         this.spell  = spell;
-
-        GameObject obj = Instantiate(spell.SpellPrepareObj);
-        obj.GetComponent<SpellPrepare>().mask =spell. mask;
-        DragSpellObj = obj;
+        if (spell.SpellPrepareObj != null)
+        {
+            GameObject obj = Instantiate(spell.SpellPrepareObj);
+            obj.GetComponent<SpellPrepare>().mask = spell.mask;
+            DragSpellObj = obj;
+            DragSpellObj.SetActive(true);
+        }
         PrepearingCastSpell = true;
-        DragSpellObj.SetActive(true);
-
     }
     
     //public IEnumerator CastSpell(GameObject SpellObj, float KastTimer, bool CastAtPoint, Vector3 CursorPosition)
@@ -1040,7 +1068,7 @@ public class CursorController : MonoBehaviour
             control.TalkTargetControl = null;
             control.EnemyTarget = null;
             control.LootTarget = null;
-            control.currentActivityImage = null;
+            control.currentActivityImage.sprite = null;
 
             control.SetTargetPosition(spis[i].transform.position, false, Groundhit.point);
             StartCoroutine(ChangeCoursor(ClickedCursour, 0.2f));

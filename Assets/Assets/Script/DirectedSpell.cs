@@ -18,16 +18,22 @@ namespace Assets.Script
         public Creature targetCreature;
 
         private GameObject target;
+
+        [Header("Not necessarily")]
+        [SerializeField] private ParticleSystem particle;
         private void FixedUpdate()
         {
-            Vector3 direction = (target.transform.position - transform.position).normalized;
-            rb.linearVelocity = direction * Speed;
-            transform.LookAt(target.transform.position);
+            if (target != null)
+            {
+                Vector3 direction = (target.transform.position - transform.position).normalized;
+                rb.linearVelocity = direction * Speed;
+                transform.LookAt(target.transform.position);
+            }
         }
         private void OnEnable()
         {
             if (targerPlayer != null) { target = targerPlayer.gameObject; }
-            else {target = targetCreature.gameObject; }
+            else if (targetCreature != null){target = targetCreature.gameObject; }
         }
         private void OnTriggerEnter(Collider other)
         {
@@ -41,6 +47,11 @@ namespace Assets.Script
                         else { cr.DamageTake(Damage + playerStr, false); }
                     }
                     else if (Heal>0) { cr.GetHeal(Heal); }
+                    if (particle != null)
+                    {
+                        particle.gameObject.transform.position = transform.position;
+                        particle.Play();
+                    }
                     gameObject.SetActive(false);
                 }
             }
@@ -54,6 +65,11 @@ namespace Assets.Script
                         else { pl.DamageTake(Damage + playerStr, false); }
                     }
                     else if (Heal > 0) { pl.GetHeal(Heal); }
+                    if (particle != null)
+                    {
+                        particle.gameObject.transform.position = transform.position;
+                        particle.Play();
+                    }
                     gameObject.SetActive(false);
                 }
             }
