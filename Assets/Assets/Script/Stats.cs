@@ -15,7 +15,7 @@ public class Stats : MonoBehaviour
 
     public UnityEngine.UI.Image icon;
 
-    private void Awake()
+    private void Start()
     {
         if (playerControl != null)
         {

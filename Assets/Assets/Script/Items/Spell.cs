@@ -2,6 +2,9 @@ using UnityEngine;
 [CreateAssetMenu(menuName = "Data/Spell/BaseSpell", fileName = "BaseSpell")]
 public class Spell : ScriptableObject
 {
+    public bool isBuff;
+    public bool isHeal;
+
     [Header("1 - player; 2 - enemy; 3 - all")]
     public int mask; // 1 - player; 2 - enemy; 3 - all
 
@@ -17,15 +20,15 @@ public class Spell : ScriptableObject
     public int SpellTransformIndex;
 
     [Header("Object under cursor")]
-    public GameObject SpellPrepareObj;
+    public int SpellPrepareInd;
 
     public bool CastAtPoint; // false - cast from player
 
     public bool CastFromPlayer; // false - cast from player
 
     public bool CastDirected; // false - cast from player
-    [Header("False - attackAnim")]
-    public bool SpellCastAnimation;
+    [Header("False - SpellAnimation")]
+    public bool AttackCastAnimation;
     [Header("OnlyForAttackAnim")]
     public float AdditionalDamage;
 

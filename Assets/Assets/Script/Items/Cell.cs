@@ -73,6 +73,7 @@ public class Cell : MonoBehaviour
         else if (CurrentSpell != null)
         {
             Debug.Log("SpellClicked");
+            _CursorController.pressedCell = this;
             CurrentSpell.Use(_CursorController);
         }
     }

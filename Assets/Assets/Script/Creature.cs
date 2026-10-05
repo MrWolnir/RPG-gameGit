@@ -1,16 +1,20 @@
+using Assets.Script;
+using DG.Tweening;
 using GDS.Core;
 using GDS.Core.Events;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using Unity.Mathematics;
+using UnityEditor.Experimental.GraphView;
 using UnityEngine;
+using UnityEngine.AI;
 using UnityEngine.Events;
 using UnityEngine.SocialPlatforms;
 using UnityEngine.UIElements;
 using static UnityEngine.Rendering.DebugUI;
-using DG.Tweening;
 
 public class Creature : MonoBehaviour
 {
@@ -23,11 +27,12 @@ public class Creature : MonoBehaviour
     public HitBoxContr hitBoxContr;
     public DialogControl dialogControl;
     [SerializeField] private GameObject HitBox;
+    public NavMeshAgent agent;
+
+    [Header("1 - mele; 2 - cast")]
+    [SerializeField] private int action; 
 
     public HpBarControlelr hpBarController;
-
-    public UnityEngine.UI.Image currentActivityImage;
-    [SerializeField] private Sprite attackSprite;
 
     [Header("Stats")]
     public string name;
@@ -53,6 +58,22 @@ public class Creature : MonoBehaviour
     public int Constitution; // Hp
     public int Intelligence;
     public int level;
+
+    //current activity On health bar
+    public UnityEngine.UI.Image currentActivityImage;
+    [SerializeField] private Sprite baseActivityImage;
+    [SerializeField] private Sprite attackActivityImage;
+
+
+    [SerializeField] private float castChange;
+    private Spell currentSpell;
+    [SerializeField] private int[] spellsLimit;
+    [SerializeField] private Spell[] allSpells;
+    [SerializeField] private Spell[] avableSpells;
+
+    private Coroutine CastingSpellCour;
+    private Coroutine attackCour;
+    [SerializeField] private Transform[] spellCastPos;
     [Header("Active")]
 
     public bool isEnemy;
@@ -64,6 +85,7 @@ public class Creature : MonoBehaviour
     private bool walkWait = false;
 
     private bool isMove = false;
+    private bool moveBlock = false;
 
     public bool InFight = false;
     [SerializeField] private bool IsAttacking;
@@ -73,13 +95,14 @@ public class Creature : MonoBehaviour
 
     [Header("Attack")]
     [SerializeField] private int damage;
-    public PlayerControl target = null;
+    public PlayerControl playerTarget = null;
+    public Creature creatureTarget = null;
     [SerializeField] private float AttackDistance;
 
-
+    private float timer = 0;
+    private float maxTimer = 0.3f;
     //Set who is it
     [Header("Equip")]
-
 
     [SerializeField] private bool Sword;
     [SerializeField] private bool Bow;
@@ -104,8 +127,11 @@ public class Creature : MonoBehaviour
     public List<Creature> team;
     void Start()
     {
-        //here
         animator.SetBool("Sword", true);
+        updateSpells();
+
+
+
     }
 
     // Update is called once per frame
@@ -113,14 +139,13 @@ public class Creature : MonoBehaviour
     {
         if (!Dummy)
         {
-            if (target == null && WalkPoints.Count == 0 && InFight == false)
+            if (playerTarget == null && WalkPoints.Count == 0 && InFight == false)
             {
                 rb.linearVelocity = Vector3.zero;
             }
             if (hp > 0 && !isDead)
             {
-                Vector3 horisontalVelocity = new Vector3(rb.linearVelocity.x, 0, rb.linearVelocity.z);
-                animator.SetFloat("speed", horisontalVelocity.magnitude);
+                animator.SetFloat("speed", agent.velocity.magnitude);
 
 
                 KdControl();
@@ -140,17 +165,21 @@ public class Creature : MonoBehaviour
             {
                 if (!walkWait)
                 {
-                    Vector3 rawDirection = (WalkPoints[index].transform.position - gameObject.transform.position).normalized;
-                    rawDirection.y = 0f;
-                    Vector3 direction = rawDirection;
-                    rb.linearVelocity = direction * walkSpeed;
-
-                    Vector3 lookDirection = (WalkPoints[index].transform.position - transform.position);
-                    lookDirection = new Vector3(lookDirection.x, 0, lookDirection.z).normalized;
-                    transform.rotation = Quaternion.LookRotation(-lookDirection);
+                    //Vector3 rawDirection = (WalkPoints[index].transform.position - gameObject.transform.position).normalized;
+                    //rawDirection.y = 0f;
+                    //Vector3 direction = rawDirection;
+                    //rb.linearVelocity = direction * walkSpeed;
+                    if (!agent.hasPath && !agent.pathPending)
+                    { agent.SetDestination(WalkPoints[index].transform.position); }
+                    
+                    //Vector3 lookDirection = (WalkPoints[index].transform.position - transform.position);
+                    //lookDirection = new Vector3(lookDirection.x, 0, lookDirection.z).normalized;
+                    //transform.rotation = Quaternion.LookRotation(-lookDirection);
                     if (Vector3.Distance(gameObject.transform.position, new Vector3(WalkPoints[index].transform.position.x, gameObject.transform.position.y, WalkPoints[index].transform.position.z)) < walkStopDistance)
                     {
-                        rb.linearVelocity = Vector3.zero;
+                        //rb.linearVelocity = Vector3.zero;
+                        agent.ResetPath();
+                        rb.linearVelocity = new Vector3(0, 0, 0);
                         StartCoroutine(walkWaitCour(WalkWaitTime[index]));
                     }
                 }
@@ -158,90 +187,315 @@ public class Creature : MonoBehaviour
         }
         else if (InFight)
         {
-            if (target != null)
+            if (action == 1)
             {
-                isMove = true;
-                Vector3 lookDirection = (target.transform.position - transform.position);
-                lookDirection = new Vector3(lookDirection.x, 0, lookDirection.z).normalized;
-                transform.rotation = Quaternion.LookRotation(-lookDirection);
-                if (AttackDistance + dop < Vector3.Distance(gameObject.transform.position, target.transform.position))
-                {
-                    if (isDuel) { StartCoroutine(MeleAttack(damage)); isDuel = false; 
-                        PlayerControl pl = null;
-                        float dst = 1000f;
-                        foreach (PlayerControl play in cursorController.mainTeam)
-                        {
-                            if (play != target)
-                            {
-                                float newDists = Vector3.Distance(transform.position, play.transform.position);
-                                if (newDists < dst)
-                                {
-                                    pl = play;
-                                    dst = newDists;
-                                }
-                            }
-                        }
-                        if (pl != null)
-                        {
-                            target = pl;
-                        }
-                        
-                    }
-
-
-                    dop = 0f;
-                    Vector3 direction = (target.transform.position - transform.position).normalized;
-                    direction.y = 0;
-                    rb.linearVelocity = direction * speed;
-                }
-                else if (AttackDistance + dop > Vector3.Distance(gameObject.transform.position, target.transform.position))
-                {
-                    isDuel = true;
-                    dop = 0.2f;
-                    isMove = false;
-                    rb.angularVelocity = Vector3.zero;
-                    rb.linearVelocity = Vector3.zero;
-                    if (currentStamina <= 0.01f && !IsAttacking)
-                    {
-                        StartCoroutine(MeleAttack(damage));
-                    }
-                }
+                meleAttack();
+            }
+            else if (action == 2) //spell
+            {
+                magicAttack();
             }
             else
-            {
-                PlayerControl pl = null;
-                float dst = 1000f;
-                foreach (PlayerControl play in cursorController.mainTeam)
+            {//выбор цели
+                if (avableSpells.Length > 0)
                 {
-                    float newDists = Vector3.Distance(transform.position, play.transform.position);
-                    if (newDists < dst)
-                    {
-                        pl = play;
-                        dst = newDists;
+                    if (UnityEngine.Random.Range(0f, 1f) > castChange)
+                    { action = 1; }
+                    else 
+                    { 
+                        currentSpell = null;
+                        int attends = 0;
+                        while (currentSpell == null && attends<10)
+                        {
+                            attends++;
+                            Spell chosenSpell = avableSpells[UnityEngine.Random.Range(0, avableSpells.Length)];
+                            if (chosenSpell.isHeal)
+                            {
+                                float temp = 1f;
+                                foreach (Creature cr in cursorController.enemyTeam)
+                                {
+                                    if (cr.maxHp - cr.hp > temp)
+                                    {
+                                        temp = cr.maxHp - cr.hp;
+                                        creatureTarget = cr;
+                                    }
+                                }
+                                if (temp != 1f)
+                                {
+                                    currentSpell = chosenSpell;
+                                }
+
+                            }
+                            else if (chosenSpell.isBuff)
+                            {
+                                creatureTarget = cursorController.enemyTeam[UnityEngine.Random.Range(0, cursorController.enemyTeam.Count)];
+                                currentSpell = chosenSpell;
+                            }
+                            else
+                            {
+                                if (playerTarget == null || playerTarget._Hp < 0)
+                                {
+                                    PlayerControl pl = null;
+                                    float dst = 1000f;
+                                    foreach (PlayerControl play in cursorController.mainTeam)
+                                    {
+                                        if (play != playerTarget && play._Hp > 0)
+                                        {
+                                            float newDists = Vector3.Distance(transform.position, play.transform.position);
+                                            if (newDists < dst)
+                                            {
+                                                pl = play;
+                                                dst = newDists;
+                                            }
+                                        }
+                                    }
+                                    if (pl != null)
+                                    { playerTarget = pl; }
+                                }
+                                currentSpell = chosenSpell;
+                            }
+                        }
+                        if (currentSpell != null)
+                        { action = 2; }
+                        else { action = 1; }
+                        
+
                     }
                 }
-                if (pl != null)
+                else
                 {
-                    target = pl;
+                    action = 1;
                 }
             }
         }
     }
-    private IEnumerator MeleAttack(float damage)
+
+    private void meleAttack()
     {
-        currentActivityImage.sprite = attackSprite;
+        if (playerTarget != null)
+        {
+            currentActivityImage.sprite = attackActivityImage;
+            isMove = true;
+            if (AttackDistance < Vector3.Distance(gameObject.transform.position, playerTarget.transform.position) - dop)
+            {
+                if (isDuel)//удар и выбор цели при выходе из боя
+                {
+                    StartCoroutine(Attack(damage)); isDuel = false;
+                    PlayerControl pl = null;
+                    float dst = 1000f;
+                    foreach (PlayerControl play in cursorController.mainTeam)
+                    {
+                        if (play != playerTarget && play._Hp > 0 && Vector3.Distance(transform.position, play.transform.position) < 5f)
+                        {
+                            float newDists = Vector3.Distance(transform.position, play.transform.position);
+                            if (newDists < dst)
+                            {
+                                pl = play;
+                                dst = newDists;
+                            }
+                        }
+                    }
+                    if (pl != null)
+                    {
+                        playerTarget = pl;
+                    }
+                }
+                if (!moveBlock)
+                {
+                    dop = 0f;
+                    timer += Time.deltaTime;
+
+                    if (timer > maxTimer)
+                    {
+                        agent.SetDestination(playerTarget.transform.position);
+                        timer = 0f;
+                    }
+                }
+            }
+            else if (AttackDistance + dop > Vector3.Distance(gameObject.transform.position, playerTarget.transform.position) - dop)
+            {
+                dop = 0.2f;
+                isDuel = true;
+                isMove = false;
+                Vector3 lookDirection = (playerTarget.transform.position - transform.position);
+                lookDirection = new Vector3(lookDirection.x, 0, lookDirection.z).normalized;
+                transform.rotation = Quaternion.LookRotation(lookDirection);
+                agent.ResetPath();
+                if (currentStamina <= 0.01f && !IsAttacking)
+                {
+                    attackCour = StartCoroutine(Attack(damage));
+                }
+            }
+        }
+        else
+        {
+            PlayerControl pl = null;
+            float dst = 1000f;
+            foreach (PlayerControl play in cursorController.mainTeam)
+            {
+                float newDists = Vector3.Distance(transform.position, play.transform.position);
+                if (newDists < dst)
+                {
+                    pl = play;
+                    dst = newDists;
+                }
+            }
+            if (pl != null)
+            {
+                playerTarget = pl;
+            }
+        }
+    }
+
+    private void magicAttack()
+    {
+        if (CastingSpellCour == null)
+        {
+            currentActivityImage.sprite = currentSpell.Icon;
+            if (currentSpell.CastRadius < Vector3.Distance(gameObject.transform.position, playerTarget.transform.position) - dop)
+            {
+                timer += Time.deltaTime;
+                if (timer > maxTimer)
+                {
+                    agent.SetDestination(playerTarget.transform.position);
+                    timer = 0f;
+                }
+            }
+            else if (currentSpell.CastRadius > Vector3.Distance(gameObject.transform.position, playerTarget.transform.position) - dop)
+            {
+                isMove = false;
+                Vector3 lookDirection = (playerTarget.transform.position - transform.position);
+                lookDirection = new Vector3(lookDirection.x, 0, lookDirection.z).normalized;
+                transform.rotation = Quaternion.LookRotation(lookDirection);
+                agent.ResetPath();
+                if (currentStamina <= 0.01f && !IsAttacking)
+                {
+                    if (currentSpell.isBuff || currentSpell.isHeal)
+                    {
+                        CastingSpellCour = StartCoroutine(CastSpell(currentSpell, null, creatureTarget, cursorController.SpellTransforms[currentSpell.SpellTransformIndex]));
+                    }
+                    else
+                    {
+                        CastingSpellCour = StartCoroutine(CastSpell(currentSpell, playerTarget, null, cursorController.SpellTransforms[currentSpell.SpellTransformIndex]));
+                    }
+                        
+                }
+            }
+        }
+    }
+    private IEnumerator Attack(float damage)
+    {
+        moveBlock = true;
+        currentActivityImage.sprite = attackActivityImage;
         animator.SetFloat("Attack", 1);
 
         Debug.Log("Attack");
         IsAttacking = true;
-        target.DamageTake(damage- defence/2, true, this);
+        playerTarget.DamageTake(damage - defence / 2, true, this);
         yield return new WaitForSeconds(1.16f);
         IsAttacking = false;
         animator.SetFloat("Attack", 0);
         currentStamina = maxStamina;
 
+        action = -1;
+        moveBlock = false;
     }
+    public IEnumerator CastSpell(Spell spell, PlayerControl pl = null, Creature cr = null, Transform SpellTransform = null)
+    {   
+        Transform targ = null;
+        
+        if (pl != null) { targ = pl.transform; }
+        else if (cr != null) { targ = cr.transform; }
+        agent.SetDestination(targ.transform.position);
 
+        if (targ != null)
+        { yield return new WaitUntil(() => (currentStamina < 0.01f && Vector3.Distance(transform.position, targ.transform.position) < spell.CastRadius + 0.2f)); }
+        else { yield return new WaitUntil(() => (currentStamina < 0.01f)); }
+        agent.ResetPath();
+
+        animator.SetBool("SpellPrepare", true);
+        yield return new WaitForSeconds(spell.СastTimer);
+        animator.SetBool("SpellPrepare", false);
+        animator.SetFloat("SpellCast", 1);
+        //     if (spell.SpellCastAnimation) { animator.SetFloat("SpellCast", 1); }
+        //else { animator.SetFloat("Attack", 1); }
+        yield return new WaitForSeconds(0.18f);
+        List<GameObject> spellObjects = new List<GameObject> { };
+        int cnt = 0;
+        spellsLimit[System.Array.IndexOf(allSpells, currentSpell)] -= 1;
+        updateSpells();
+        if (SpellTransform != null)
+        {
+            for (int i = 0; cnt < spell.Count; i++)
+            {
+                if (!SpellTransform.GetChild(i).gameObject.activeInHierarchy)
+                {
+                    spellObjects.Add(SpellTransform.GetChild(i).gameObject);
+                    Debug.Log(SpellTransform.GetChild(i).name);
+                    cnt++;
+                }
+            }
+        }
+        if (spell.CastAtPoint)
+        {
+            foreach (GameObject obj in spellObjects)
+            {
+                obj.transform.position = targ.position;
+                obj.SetActive(true);
+            }
+        }
+        //else if (spell.CastFromPlayer)
+        //{
+        //    foreach (GameObject obj in spellObjects)
+        //    {
+        //        Vector3 direction = ((CursorPosition - transform.position).normalized);
+        //        Quaternion Rotation = Quaternion.LookRotation(direction);
+        //        Rotation.x = 0;
+        //        Rotation.z = 0;
+        //        obj.transform.position = transform.position;
+        //        obj.transform.rotation = Rotation;
+        //        obj.SetActive(true);
+        //    }
+        //}
+        else if (spell.CastDirected)
+        {
+            Debug.Log("SpellCasted");
+            if (SpellTransform != null)
+            {
+                int ind = 0;
+                foreach (GameObject obj in spellObjects)
+                {
+                    DirectedSpell dirSpell = obj.GetComponent<DirectedSpell>();
+                    dirSpell.targetCreature = cr;
+                    dirSpell.targerPlayer = pl;
+                    dirSpell.playerInt = Intelligence;
+                    dirSpell.playerStr = Strength;
+                    dirSpell.gameObject.transform.position = spellCastPos[ind].position;
+                    dirSpell.gameObject.SetActive(true);
+                    ind++;
+                }
+            }
+        }
+        yield return new WaitForSeconds(1.05f - 0.18f);
+        currentStamina = maxStamina;
+        animator.SetFloat("SpellCast", 0);
+        currentActivityImage.sprite = baseActivityImage;
+        CastingSpellCour = null;
+        agent.updateRotation = true;
+
+        action = -1;
+    }
+    private void updateSpells()
+    {
+        for (int i = 0; i<allSpells.Length; i++)
+        {
+            avableSpells = new Spell[0];
+            if (spellsLimit[i] != 0)
+            {
+                avableSpells.Append(allSpells[i]);
+            }
+        }
+    }
     //to stop while point walking
     private IEnumerator walkWaitCour(float waitTime)
     {
@@ -255,7 +509,6 @@ public class Creature : MonoBehaviour
         else
         {
             index += 1;
-
         }
         walkWait = false;
     }
@@ -301,7 +554,7 @@ public class Creature : MonoBehaviour
                             if (Vector3.Distance(contr.transform.position, cr.transform.position) < dst)
                             {
                                 dst = Vector3.Distance(contr.transform.position, cr.transform.position);
-                                cr.target = contr;
+                                cr.playerTarget = contr;
                             }
                         }
                         
@@ -309,7 +562,7 @@ public class Creature : MonoBehaviour
                 }
                 if (UnityEngine.Random.Range(0f, 1f) < chanceToChangeTarget)
                 {
-                    target = control;
+                    playerTarget = control;
                 }
             }
         }
@@ -372,7 +625,7 @@ public class Creature : MonoBehaviour
         animator.SetTrigger("Death");
         HitBox.SetActive(false);
         gameObject.layer = LayerMask.NameToLayer("Nothing");
-        WalkPoints = null; target = null;
+        WalkPoints = null; playerTarget = null;
 
         yield return new WaitForSeconds(3.25f);
         Color newColor = bodyBagRender.material.color;

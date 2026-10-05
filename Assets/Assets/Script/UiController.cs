@@ -14,6 +14,7 @@ public class UiController : MonoBehaviour
 {
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     public PlayerControl playerControl;
+    public CursorController cursorControl;
 
     public TextMeshProUGUI Name;
     public TextMeshProUGUI Description;
@@ -32,9 +33,12 @@ public class UiController : MonoBehaviour
 
     public Stats[] list;
     public Stats[] sortedList;
+    public GameObject invisibleIcon;
 
     [SerializeField] private GameObject PlayerStatsParent; //Parent  Of Stats
     public List<Stats> stats;
+
+    public List<TextMeshProUGUI> limitTexts; //count left for spells
 
     //Dialog    
     [Header("Dialog")]
@@ -111,6 +115,13 @@ public class UiController : MonoBehaviour
     [SerializeField] private GameObject settingsMenu;
     private void Awake()
     {
+        UpdateList();
+
+        for (int i = 0; i < cursorControl.mainTeam.Count; i++)
+        {
+            list[i].playerControl = cursorControl.mainTeam[i];
+            list[i].player = cursorControl.mainTeam[i].gameObject;
+        }
         if (playerControl != null)
         {
             CurrentPlayerController = playerControl;
@@ -119,11 +130,7 @@ public class UiController : MonoBehaviour
     }
     void Start()
     {
-
-
-        UpdateList();
-
-        // Вызываем с задержкой на 1 кадр для полной инициализации
+        // Вызываем с задержкой на 1 кадр 
         StartCoroutine(DelayedStart());
     }
     public void QuitGame()
@@ -662,12 +669,13 @@ public class UiController : MonoBehaviour
                 contr.anchoredPosition = new Vector3(0, Mathf.Ceil(CurrentPlayerController.AllSpells[i].Length / 2.0f) * 50f + 75f, 0);
                 contr.sizeDelta = new Vector2(100f, Mathf.Ceil(CurrentPlayerController.AllSpells[i].Length / 2.0f) * 50f);
 
-
-
-
             }
 
         }
         BackPanel.transform.position = panels[ind].transform.position;
     }
+    public void updateExp(PlayerControl pl, float curExp, float maxExp)
+    {
+
+    }    
 }

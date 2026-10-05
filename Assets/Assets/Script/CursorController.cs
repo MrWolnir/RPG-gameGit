@@ -8,6 +8,7 @@ using System.Transactions;
 using Unity.Burst.Intrinsics;
 using Unity.Cinemachine;
 using Unity.Multiplayer.PlayMode;
+using UnityEditor;
 using UnityEditor.Rendering;
 using UnityEngine;
 using UnityEngine.AdaptivePerformance.Provider;
@@ -18,6 +19,7 @@ using UnityEngine.InputSystem.Controls;
 using UnityEngine.ProBuilder.Shapes;
 using UnityEngine.Rendering;
 using UnityEngine.UI;
+using DG.Tweening;
 
 public class CursorController : MonoBehaviour
 {//cursor texture
@@ -38,6 +40,8 @@ public class CursorController : MonoBehaviour
 
     public UiController uiControl;
 
+    public float iconSpace;
+    private int iconInd;
 
     [Header("Current Player")]
     private GameObject CurrentPlayer;
@@ -75,10 +79,12 @@ public class CursorController : MonoBehaviour
     public GameObject UiCanvas;
 
     //PrepearedSkill
+    public Cell pressedCell;
     [Header("Prepeared Skill")]
     [SerializeField] private Spell spell;
     [SerializeField] private Transform SpellTransform;
-    [SerializeField] private List<Transform> SpellTransforms =new List<Transform>();
+    [SerializeField] private Transform SpellVisualiseTransform;
+    public List<Transform> SpellTransforms =new List<Transform>();
     public float expMulti;
 
     [Header("layers")]
@@ -108,17 +114,22 @@ public class CursorController : MonoBehaviour
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     private void Awake()
     {
-     
         foreach (Transform tr in SpellTransform)
         { SpellTransforms.Add(tr.transform); }
         CurrentPlayer = GameObject.Find("Player");
         CurrentPlayerRb = CurrentPlayer.GetComponent<Rigidbody>();
         CurrentPlayerContr = CurrentPlayer.GetComponent<PlayerControl>();
 
+
         uiControl.CurrentPlayer = CurrentPlayer;
         uiControl.CurrentPlayerController = CurrentPlayerContr;
         selectedTeam.Add(CurrentPlayerContr);
         CurrentPlayerContr.isSelected = true;
+    }
+    private void Start()
+    {
+        for (int i = 0; i < CurrentPlayerContr.spellMaxLimit.Count; i++)
+        { uiControl.limitTexts[i].text = $"{CurrentPlayerContr.currentSpellLimit[i]}"; }
     }
 
     // Update is called once per frame
@@ -127,7 +138,8 @@ public class CursorController : MonoBehaviour
         CameraMovement();
 
         DragItems();
-        DragStats();
+        if (IsDragStats)
+        {DragStats();}
         ClickControl();
 
     }
@@ -270,10 +282,15 @@ public class CursorController : MonoBehaviour
                     if (PrepearingCastSpell)
                     {
                         PlayerControl pl = TOFhit.collider.GetComponentInParent<PlayerControl>();
-                        CurrentPlayerContr.TryCast(spell, Vector3.zero, pl, null, SpellTransforms[spell.SpellTransformIndex]);
-                        CurrentPlayerContr.spellPos = pl.transform.position;
+                        if (spell.SpellTransformIndex >= 0 )
+                        { CurrentPlayerContr.TryCast(spell, Groundhit.point, pl, null, SpellTransforms[spell.SpellTransformIndex]); }
+                        else
+                        { CurrentPlayerContr.TryCast(spell, Groundhit.point, pl, null, null); }
+                            CurrentPlayerContr.spellPos = pl.transform.position;
+                        if (DragSpellObj)
+                        { DragSpellObj.SetActive(false); }
+                        DragSpellObj = null;
                         PrepearingCastSpell = false;
-
                     }
                     else
                     {
@@ -282,6 +299,8 @@ public class CursorController : MonoBehaviour
                         CurrentPlayerRb = TOFhit.collider.GetComponentInParent<Rigidbody>();
                         CurrentPlayer = TOFhit.collider.transform.parent.gameObject;
 
+                        for (int i = 0; i < CurrentPlayerContr.spellMaxLimit.Count; i++)
+                        { uiControl.limitTexts[i].text = $"{CurrentPlayerContr.currentSpellLimit[i]}"; }
                         uiControl.CurrentPlayer = CurrentPlayer;
                         uiControl.CurrentPlayerController = CurrentPlayerContr;
                         uiControl.SetSkillPanel();
@@ -310,8 +329,14 @@ public class CursorController : MonoBehaviour
                         //атака/испрользование направленного скила
                         if (PrepearingCastSpell)
                         {
-                            CurrentPlayerContr.TryCast(spell, Vector3.zero, null, creature, SpellTransforms[spell.SpellTransformIndex]);
+                            if (spell.SpellTransformIndex >= 0)
+                            { CurrentPlayerContr.TryCast(spell, Groundhit.point, null, creature, SpellTransforms[spell.SpellTransformIndex]); }
+                            else
+                            { CurrentPlayerContr.TryCast(spell, Groundhit.point, null, creature, null); }
                             CurrentPlayerContr.spellPos = creature.transform.position;
+                            if (DragSpellObj)
+                            { DragSpellObj.SetActive(false); }
+                            DragSpellObj = null;
                             PrepearingCastSpell = false;
                         }
                         else
@@ -371,7 +396,12 @@ public class CursorController : MonoBehaviour
                 CurrentPlayerContr.ViewPointAfterMove = null;
                 CurrentPlayerContr.spellPos = Groundhit.point;
                 if (CurrentPlayerContr)
-                    CurrentPlayerContr.TryCast(spell, Groundhit.point, null, null, SpellTransforms[spell.SpellTransformIndex]);
+                {
+                    if (spell.SpellTransformIndex >= 0)
+                    { CurrentPlayerContr.TryCast(spell, Groundhit.point, null, null, SpellTransforms[spell.SpellTransformIndex]); }
+                    else
+                    { CurrentPlayerContr.TryCast(spell, Groundhit.point, null, null, null); }
+                }
                 PrepearingCastSpell = false;
                 if (DragSpellObj)
                 { DragSpellObj.SetActive(false); }
@@ -446,8 +476,13 @@ public class CursorController : MonoBehaviour
                 PrepearingCastSpell = false;
                 CurrentPlayerContr.animator.SetBool("SpellPrepare", false);
                 CurrentPlayerContr.animator.SetFloat("SpellCast", 0);
-                DragSpellObj.SetActive(false);
-                DragSpellObj = null;
+                if (DragSpellObj != null)
+                {
+                    DragSpellObj.SetActive(false);
+                    DragSpellObj = null;
+                }
+                CurrentPlayerContr.SpellRadiusCircle.gameObject.SetActive(false);
+                
 
             }
             //проверка на нажатие ui
@@ -665,15 +700,37 @@ public class CursorController : MonoBehaviour
     }
     public void PrepareSpell(Spell spell)
     {
-        this.spell  = spell;
-        if (spell.SpellPrepareObj != null)
+        bool able = true;
+        for (int i = 0; i < CurrentPlayerContr.AllSpells.Length; i++) //check if able to use skill
         {
-            GameObject obj = Instantiate(spell.SpellPrepareObj);
-            obj.GetComponent<SpellPrepare>().mask = spell.mask;
-            DragSpellObj = obj;
-            DragSpellObj.SetActive(true);
+            if (CurrentPlayerContr.AllSpells[i].Contains(spell))
+            {
+                if (CurrentPlayerContr.currentSpellLimit[i] == 0)
+                {
+                    able = false;
+                    if (!DOTween.IsTweening(pressedCell.image))
+                    {
+                        pressedCell.image.DOColor(new Color(1f, 0.6f, 0.6f, 1f), 0.3f).SetLoops(2, LoopType.Yoyo);
+                    }
+                    pressedCell.image.transform.DOShakePosition(0.6f, 7f);
+                    break;
+                }    
+            }
         }
-        PrepearingCastSpell = true;
+        if (able)
+        {
+            CurrentPlayerContr.SpellRadiusCircle.transform.localScale = new Vector3(spell.CastRadius, 1, spell.CastRadius);
+            CurrentPlayerContr.SpellRadiusCircle.gameObject.SetActive(true);
+            this.spell = spell;
+            if (spell.SpellPrepareInd != 0)
+            {
+                GameObject obj = SpellVisualiseTransform.GetChild(spell.SpellPrepareInd).gameObject;
+                obj.GetComponent<SpellPrepare>().mask = spell.mask;
+                DragSpellObj = obj;
+                DragSpellObj.SetActive(true);
+            }
+            PrepearingCastSpell = true;
+        }
     }
     
     //public IEnumerator CastSpell(GameObject SpellObj, float KastTimer, bool CastAtPoint, Vector3 CursorPosition)
@@ -882,84 +939,34 @@ public class CursorController : MonoBehaviour
         {
             CursorDragObj.transform.position = Input.mousePosition;
             Vector3 MousePosit = Input.mousePosition;
+            Stats[] list = uiControl.sortedList;
+
+            bool fl = true;
+            for (int i = 0; i < uiControl.sortedList.Length; i++)
+            {
+                if (MousePosit.x < list[i].transform.position.x && MousePosit.x > list[i].transform.position.x - iconSpace*2)
+                {
+                    Debug.Log(MousePosit.x);
+                    int ind = list[i].transform.GetSiblingIndex();
+                    uiControl.invisibleIcon.transform.SetSiblingIndex(ind);
+                    iconInd = ind;
+                    break;
+                }
+            }
+            Debug.Log(list[1].transform.position.x - list[0].transform.position.x);
 
             if (Input.GetMouseButtonUp(0))
             {
-                Stats[] list = uiControl.sortedList;
-
-                if (list.Length == 2)
-                {
-                    if (MousePosit.x < list[0].gameObject.transform.position.x)
-                    {
-                        MovingStats.transform.SetSiblingIndex(0);
-                        Debug.Log("0");
-                    }
-                    else if (MousePosit.x < list[1].gameObject.transform.position.x - 10 && MousePosit.x > list[0].gameObject.transform.position.x - 10)
-                    {
-                        MovingStats.transform.SetSiblingIndex(1);
-                        Debug.Log("1");
-                    }
-                    else if (MousePosit.x > list[1].gameObject.transform.position.x - 10)
-                    {
-                        MovingStats.transform.SetSiblingIndex(2);
-                        Debug.Log("2");
-                    }
-
-                }
-                else if (list.Length == 3)
-                {
-                    if (MousePosit.x < list[0].gameObject.transform.position.x)
-                    {
-                        MovingStats.transform.SetSiblingIndex(0);
-                        Debug.Log("0");
-                    }
-                    else if (MousePosit.x < list[1].gameObject.transform.position.x && MousePosit.x > list[0].gameObject.transform.position.x)
-                    {
-                        MovingStats.transform.SetSiblingIndex(1);
-                        Debug.Log("1");
-                    }
-                    else if (MousePosit.x < list[2].gameObject.transform.position.x && MousePosit.x > list[1].gameObject.transform.position.x)
-                    {
-                        MovingStats.transform.SetSiblingIndex(2);
-                        Debug.Log("2");
-                    }
-                    else if (MousePosit.x > list[2].gameObject.transform.position.x)
-                    {
-                        MovingStats.transform.SetSiblingIndex(3);
-                        Debug.Log("3");
-                    }
-
-                }
-                else if (list.Length == 4)
-                {
-                    if (MousePosit.x < list[0].gameObject.transform.position.x)
-                    {
-                        MovingStats.transform.SetSiblingIndex(0);
-                        Debug.Log("0");
-                    }
-                    else if (MousePosit.x < list[1].gameObject.transform.position.x - 10 && MousePosit.x > list[0].gameObject.transform.position.x - 10)
-                    {
-                        MovingStats.transform.SetSiblingIndex(1);
-                        Debug.Log("1");
-                    }
-                    else if (MousePosit.x < list[2].gameObject.transform.position.x - 10 && MousePosit.x > list[1].gameObject.transform.position.x - 10)
-                    {
-                        MovingStats.transform.SetSiblingIndex(2);
-                        Debug.Log("2");
-                    }
-                    else if (MousePosit.x < list[3].gameObject.transform.position.x - 10 && MousePosit.x > list[2].gameObject.transform.position.x - 10)
-                    {
-                        MovingStats.transform.SetSiblingIndex(3);
-                        Debug.Log("3");
-                    }
-                    else if (MousePosit.x > list[3].gameObject.transform.position.x - 10)
-                    {
-                        MovingStats.transform.SetSiblingIndex(4);
-                        Debug.Log("4");
-                    }
-                }
-
-
+                MovingStats.transform.SetSiblingIndex(iconInd);
+                MovingStats.gameObject.SetActive(true);
+                IsDragStats = false;
+                uiControl.invisibleIcon.transform.SetSiblingIndex(5);
+                uiControl.UpdateList();
+            }
+            if (Input.GetMouseButtonUp(1))
+            {
+                MovingStats.gameObject.SetActive(true);
+                uiControl.invisibleIcon.SetActive(false);
                 uiControl.UpdateList();
                 IsDragStats = false;
             }
@@ -969,15 +976,17 @@ public class CursorController : MonoBehaviour
     {
         CurrentPlayerContr = playerControl;
         MovingStats = stat;
+        stat.gameObject.SetActive(false);
         uiControl.CurrentPlayer = player;
         uiControl.CurrentPlayerController = playerControl;
         uiControl.SetSkillPanel();
-
+        uiControl.invisibleIcon.transform.SetSiblingIndex(MovingStats.transform.GetSiblingIndex());
+        MovingStats.transform.SetSiblingIndex(6);
         CursorDragPicture.color = Color.white;
         CursorDragPicture.sprite = sprite;
-
         IsDragStats = true;
         yield return new WaitWhile(() => IsDragStats);
+
 
         CursorDragPicture.color = new Color(0, 0, 0, 0);
         CursorDragPicture.sprite = null;
@@ -1068,7 +1077,7 @@ public class CursorController : MonoBehaviour
             control.TalkTargetControl = null;
             control.EnemyTarget = null;
             control.LootTarget = null;
-            control.currentActivityImage.sprite = null;
+            control.currentActivityImage.sprite = control.baseActivityImage;
 
             control.SetTargetPosition(spis[i].transform.position, false, Groundhit.point);
             StartCoroutine(ChangeCoursor(ClickedCursour, 0.2f));

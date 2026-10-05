@@ -1,11 +1,13 @@
 using Assets.Script;
 using DG.Tweening;
 using Microsoft.Unity.VisualStudio.Editor;
+using Mono.Cecil;
 using Mono.Cecil.Cil;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using TMPro;
 using Unity.Cinemachine;
@@ -57,7 +59,7 @@ public class PlayerControl : MonoBehaviour
 
     public int level;
     [SerializeField] private TextMeshPro levelIconText;
-    public int currentExp;
+    public float currentExp;
     public float maxExp;
     public int levelPoints;
 
@@ -94,15 +96,18 @@ public class PlayerControl : MonoBehaviour
     public bool isSelected;
 
     public UnityEngine.UI.Image currentActivityImage;
-    [SerializeField] private Sprite baseActivityImage;
-    [SerializeField] private Sprite attackSprite;
+    public Sprite baseActivityImage;
+    public Sprite attackActivityImage;
     
 
     public GameObject bodyBag;
     public Renderer bodyBagRender;
 
+    [SerializeField] List<TextMeshProUGUI> hpTexts;
+    [SerializeField] Transform hpTextPoint;
+
     [Header("Attack")]
-    private int Damage;
+    [SerializeField] private int Damage;
     private bool IsAttacking = false;
     private bool attack;
     public float AttackDistance;
@@ -166,6 +171,10 @@ public class PlayerControl : MonoBehaviour
     public ProBuilderMesh SpellRadiusCircle;
     public Coroutine CastingSpellCour;
 
+    //max spells before rest
+    public List<int> spellMaxLimit;
+    public List<int> currentSpellLimit;
+
     public List<int> SkillActivated;
 
     public Vector3 spellPos; //spellPoint
@@ -177,7 +186,8 @@ public class PlayerControl : MonoBehaviour
     public Spell[] Spell5;
 
     public Spell[][] AllSpells;
-    
+
+    [SerializeField] private Transform[] spellCastPos;
     public bool isMove = false;
 
     public float speed;
@@ -217,7 +227,6 @@ public class PlayerControl : MonoBehaviour
         //    Debug.Log("Ó àãåíòà ÍÅÒ ïóòè");
         //}
     }
-    // Update is called once per frame
     void Update()
     {
         hpBarController.UpdateStamina(currentStamina, maxStamina);
@@ -467,6 +476,7 @@ public class PlayerControl : MonoBehaviour
 }
     public void getExp(int col)
     {
+        uiController.updateExp(this, currentExp, maxExp);
         currentExp += col;
         if (currentExp >= maxExp)
         {
@@ -511,7 +521,6 @@ public class PlayerControl : MonoBehaviour
             PlayerDirection = new Vector3(spellPos.x, transform.position.y, spellPos.z) - transform.position;
             Quaternion look = Quaternion.LookRotation(PlayerDirection);
             transform.rotation = Quaternion.RotateTowards(transform.rotation, look, 720f * Time.deltaTime);
-            Debug.Log("ROTATE");
         }
         else if (TalkTargetControl != null)
         {
@@ -616,23 +625,48 @@ public class PlayerControl : MonoBehaviour
         {
             StopCoroutine(AttackingCour);
         }
-        SpellRadiusCircle.transform.localScale = new Vector3(spell.CastRadius * 2, spell.CastRadius * 2, 1);
-        SpellRadiusCircle.gameObject.SetActive(true);
         CastingSpellCour = StartCoroutine(CastSpell(spell, CursorPosition,pl, cr, SpellTransform));
     }
     public IEnumerator CastSpell(Spell spell, Vector3 CursorPosition, PlayerControl pl = null, Creature cr = null, Transform SpellTransform = null)
     {
         SpellRadiusCircle.gameObject.SetActive(false);
-        yield return new WaitUntil(() => currentStamina < 0.01f);
-        animator.SetBool("SpellPrepare", true);
-        yield return new WaitForSeconds(spell.ÑastTimer);
-        animator.SetBool("SpellPrepare", false);
-        animator.SetFloat("SpellCast", 1);
-        //     if (spell.SpellCastAnimation) { animator.SetFloat("SpellCast", 1); }
-        //else { animator.SetFloat("Attack", 1); }
-        //else { animator.SetFloat("Attack", 1); }
-        yield return new WaitForSeconds(0.18f);
+
+        Vector3 point = Vector3.zero;
+        Transform targ = null;
+        if (spell.CastAtPoint) { point = CursorPosition; agent.SetDestination(point); }
+        else if (pl != null) { targ = pl.transform; agent.SetDestination(targ.transform.position); }
+        else if (cr != null) { targ = cr.transform; agent.SetDestination(targ.transform.position); }
+
+        if (point != Vector3.zero && !spell.CastDirected)
+        { yield return new WaitUntil(() => (currentStamina < 0.01f && Vector3.Distance(transform.position, point) < spell.CastRadius + 0.2f)); }
+        else if (targ != null)
+        { yield return new WaitUntil(() => (currentStamina < 0.01f && Vector3.Distance(transform.position, targ.transform.position) < spell.CastRadius + 0.2f)); }
+        else { yield return new WaitUntil(() => (currentStamina < 0.01f)); }
+        agent.ResetPath();
+
+        if (!spell.AttackCastAnimation)
+        {
+            animator.SetBool("SpellPrepare", true);
+            yield return new WaitForSeconds(spell.ÑastTimer);
+            animator.SetBool("SpellPrepare", false);
+            animator.SetFloat("SpellCast", 1);
+        }
+        else
+        { 
+            animator.SetFloat("Attack", 1f);
+            yield return new WaitForSeconds(0.6f);
+        }
+            yield return new WaitForSeconds(0.18f);
         List<GameObject> spellObjects = new List<GameObject> { };
+        for (int i = 0; i < AllSpells.Length; i++)//set limits
+        { 
+            if (AllSpells[i].Contains(spell))
+            {
+                currentSpellLimit[i] -= 1;
+                uiController.limitTexts[i].text = $"{spellMaxLimit[i]}/{currentSpellLimit[i]}";
+                break;
+            }
+        }
         int cnt = 0;
         if (SpellTransform !=  null)
         {
@@ -671,23 +705,38 @@ public class PlayerControl : MonoBehaviour
         {
             if (SpellTransform != null)
             {
+                int ind = 0;
                 foreach (GameObject obj in spellObjects)
                 {
                     DirectedSpell dirSpell = obj.GetComponent<DirectedSpell>();
-                    if (dirSpell == null) { Debug.Log("DIRRR"); }
                     dirSpell.targetCreature = cr;
                     dirSpell.targerPlayer = pl;
                     dirSpell.playerInt = Intelligence + buffIntelligence;
                     dirSpell.playerStr = Strength + buffStrength;
-                    dirSpell.gameObject.transform.position = transform.position;
+                    dirSpell.gameObject.transform.position = spellCastPos[ind].position;
                     dirSpell.gameObject.SetActive(true);
+                    ind++;
+                }
+            }
+            else 
+            {
+                if (pl != null)
+                {
+                    pl.DamageTake(Damage + spell.AdditionalDamage, true);
+                }
+                else if (cr != null)
+                {
+                    cr.DamageTake(Damage + spell.AdditionalDamage, true);
                 }
             }
         }
         yield return new WaitForSeconds(1.05f-0.18f);
         currentStamina = maxStamina;
-        CastingSpellCour = null;
-        animator.SetFloat("SpellCast", 0);
+        if (!spell.AttackCastAnimation)
+        { animator.SetFloat("SpellCast", 0); }
+        else
+        { animator.SetFloat("Attack", 0f); }
+
         currentActivityImage.sprite = baseActivityImage;
         CastingSpellCour = null;
         agent.updateRotation = true;
@@ -695,7 +744,6 @@ public class PlayerControl : MonoBehaviour
     //mele
     public void TryMele(GameObject SpellObj, float KastTimer, float KdAfterSpell, bool CastAtPoint, Vector3 CursorPosition)
     {
-        currentActivityImage.sprite = attackSprite;
         if (CastingSpellCour != null)
         {
             StopCoroutine(CastingSpellCour);
@@ -714,6 +762,7 @@ public class PlayerControl : MonoBehaviour
 
     private IEnumerator Attack(float damage)
     {
+        currentActivityImage.sprite = attackActivityImage;
         animator.SetInteger("Random", UnityEngine.Random.Range(0, 2));
         animator.SetFloat("Attack", 1);
 
@@ -723,7 +772,8 @@ public class PlayerControl : MonoBehaviour
         if (Weapon)
         { yield return new WaitForSeconds(Weapon.AttackDurationBefore); }
         else { yield return new WaitForSeconds(HandAttackDurationBefore); }
-        EnemyTarget.DamageTake(damage + (Strength + Dexterity + buffStrength + buffDexterity) * 0.5f, true, this);
+        if (EnemyTarget)
+        { EnemyTarget.DamageTake(damage + (Strength + Dexterity + buffStrength + buffDexterity) * 0.5f, true, this); }
         if (Weapon)
         { yield return new WaitForSeconds(Weapon.AttackDurationAfter); }
         else { yield return new WaitForSeconds(HandAttackDurationAfter); }
@@ -788,21 +838,50 @@ public class PlayerControl : MonoBehaviour
         {
             animator.SetBool("Hit", true);
         }
+        damageOrHealShow(damage - defence / 2, true);
         _Hp -= Mathf.Clamp(damage-defence/2, 1, Mathf.Infinity);
         _Hp = Mathf.Clamp(_Hp, 0, _MaxHp);
         hpBarController.UpdateHp(_Hp, _MaxHp);
-
         if (_Hp <= 0)
         {
             StartCoroutine(Die());
             if (cr != null)
             {
-                cr.target = null;
+                cr.playerTarget = null;
             }
         }
     }
+    public void GetHeal(float heal)
+    {
+        _Hp += heal;
+        hpBarController.UpdateHp(_Hp, _MaxHp);
+        damageOrHealShow(heal, false);
+    }
+    private void damageOrHealShow(float hp, bool isDamage)
+    {
+        TextMeshProUGUI currentText = null;
+        foreach (TextMeshProUGUI text in hpTexts)
+        {
+            if (!text.gameObject.activeInHierarchy)
+            { currentText = text; break; }
+        }
+        if (currentText == null)
+        {
+            currentText = Instantiate(hpTexts[0], hpTexts[0].transform.parent).GetComponent<TextMeshProUGUI>();
+            currentText.gameObject.SetActive(false);
+        }
+        currentText.transform.position = hpTextPoint.position;
+        currentText.text = hp.ToString();
+        if (isDamage)
+        { currentText.color = Color.red; }
+        else
+        { currentText.color = Color.green; }
+        hpTexts.Append(currentText);
+        currentText.gameObject.SetActive(true);
+    }
     private IEnumerator Die()
     {
+        animator.SetInteger("Random", UnityEngine.Random.Range(0, 2));
         animator.SetTrigger("Death");
         HitBox.SetActive(false);
         gameObject.layer = LayerMask.NameToLayer("Nothing");
@@ -820,12 +899,6 @@ public class PlayerControl : MonoBehaviour
         bodyBagRender.material.color = newColor;
         bodyBagRender.material.DOFade(1f, 2f);
         bodyBag.SetActive(true);
-    }
-
-    public void GetHeal(float heal)
-    {
-        _Hp += heal;
-        hpBarController.UpdateHp(_Hp, _MaxHp);
     }
 
     //aniamtion attack

@@ -50,8 +50,23 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Assets.Script.DirectedSpell
   rb: {fileID: 3690668712726843389}
+  heal: 0
+  isPeriodicHeal: 0
+  healInterval: 0
+  healTimer: 0
   Damage: 6
-  Heal: 0
+  isPeriodicDamage: 0
+  damageInterval: 0
+  damageTimer: 0
+  directedAttack: 1
+  statusEffect: 0
+  timer: 0
+  stat:
+    buffDefence: 0
+    buffStrength: 0
+    buffDexterity: 0
+    buffConstitution: 0
+    buffIntelligence: 0
   Speed: 8
   isMagicScale: 1
   playerInt: 0
@@ -118,6 +133,7 @@ GameObject:
   - component: {fileID: 665771089164591632}
   - component: {fileID: 6396647524691644915}
   - component: {fileID: 370571787159276101}
+  - component: {fileID: 5754151877789502229}
   m_Layer: 11
   m_Name: "\u0421\u0444\u0435\u0440\u0430"
   m_TagString: Untagged
@@ -197,6 +213,21 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &5754151877789502229
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2170218998698679495}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 685930f12f0b2be458a310b954ec3137, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RotateControl
+  xSpeed: 8.48
+  ySpeed: 0
+  zSpeed: 0
 --- !u!1 &5401862510112041713
 GameObject:
   m_ObjectHideFlags: 0
