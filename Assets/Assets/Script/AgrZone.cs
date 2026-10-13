@@ -17,20 +17,33 @@ public class AgrZone : MonoBehaviour
                     control.team.Add(control);
 
                 }
-                cursorControl.StartFight(); //for heroes
+                if (!playerControl.InFight)
+                {
+                    cursorControl.StartFight();
+                } //for heroes
+
                 if (cursorControl.enemyTeam.Count == 0)
                 {
                     cursorControl.enemyTeam = control.team;
                 }
-
-                foreach (Creature cntr in control.team)
+                else
                 {
-                    cntr.InFight = true;
-                    cntr.hpBarController.gameObject.SetActive(true);
-                    cntr.ChangeAnimator("InFight", true);
-                    cntr.SelectCircle.SetActive(true);
-                    cntr.hitBoxContr.tempBlockCircle = true;
+                    foreach (Creature cr in control.team)
+                    {
+                        if (!cursorControl.enemyTeam.Contains(cr))
+                        { cursorControl.enemyTeam.Add(cr); }
+                        
+                    }
                 }
+
+                    foreach (Creature cntr in control.team)
+                    {
+                        cntr.InFight = true;
+                        cntr.hpBarController.gameObject.SetActive(true);
+                        cntr.ChangeAnimator("InFight", true);
+                        cntr.SelectCircle.SetActive(true);
+                        cntr.hitBoxContr.tempBlockCircle = true;
+                    }
 
             }
         }

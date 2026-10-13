@@ -90,6 +90,8 @@ public class UiController : MonoBehaviour
     [SerializeField] private Sprite pauseButtonStop;
     [SerializeField] private Sprite pauseButtonPlay;
 
+    private int currentRestCol;
+    [SerializeField] private TextMeshProUGUI restColText;
     [Header("Quest Menu")]
     [SerializeField] private GameObject questsMenu;
     [SerializeField] public Quest[] questsAll;
@@ -358,6 +360,39 @@ public class UiController : MonoBehaviour
         else
         {
             CreditsMenu.SetActive(true);
+        }
+    }
+    //rest
+    public void rest()
+    {
+        if (currentRestCol > 0)
+        {
+            bool fl = true;
+            foreach (PlayerControl pl in cursorControl.mainTeam)
+            {
+                if (pl.InFight)
+                {
+                    fl = false;
+                    break;
+                }
+            }
+            if (fl)
+            {
+                foreach (PlayerControl pl in cursorControl.mainTeam)
+                {
+                    pl.GetHeal(1000f);
+                    for (int i = 0; i < pl.spellMaxLimit.Count; i++)
+                    {
+                        pl.currentSpellLimit[i] = pl.spellMaxLimit[i];
+                    }
+                }
+                currentRestCol -= 1;
+                restColText.text = currentRestCol.ToString();
+            }
+        }
+        else
+        {
+            showTextInfo("У вас закончились припасы");
         }
     }
     //map

@@ -123,7 +123,9 @@ public class Creature : MonoBehaviour
     private bool isDuel;
 
     private float dop = 0f;
-    [SerializeField] private List<GameObject> WalkPoints;
+
+    [SerializeField] private Transform pointsParent;
+    [SerializeField] private List<Vector3> WalkPoints;
     [SerializeField] private List<float> WalkWaitTime;
     private int index;
 
@@ -135,6 +137,12 @@ public class Creature : MonoBehaviour
     public List<Creature> team;
     void Start()
     {
+        if (pointsParent != null)
+        {
+            foreach (Transform tr in pointsParent)
+            { WalkPoints.Add(tr.position); }
+        }
+        
         animator.SetBool("Sword", true);
         updateSpells();
         mapImageCheck();
@@ -219,12 +227,12 @@ public class Creature : MonoBehaviour
                     //Vector3 direction = rawDirection;
                     //rb.linearVelocity = direction * walkSpeed;
                     if (!agent.hasPath && !agent.pathPending)
-                    { agent.SetDestination(WalkPoints[index].transform.position); }
+                    { agent.SetDestination(WalkPoints[index]); }
                     
                     //Vector3 lookDirection = (WalkPoints[index].transform.position - transform.position);
                     //lookDirection = new Vector3(lookDirection.x, 0, lookDirection.z).normalized;
                     //transform.rotation = Quaternion.LookRotation(-lookDirection);
-                    if (Vector3.Distance(gameObject.transform.position, new Vector3(WalkPoints[index].transform.position.x, gameObject.transform.position.y, WalkPoints[index].transform.position.z)) < walkStopDistance)
+                    if (Vector3.Distance(gameObject.transform.position, new Vector3(WalkPoints[index].x, gameObject.transform.position.y, WalkPoints[index].z)) < walkStopDistance)
                     {
                         //rb.linearVelocity = Vector3.zero;
                         agent.ResetPath();

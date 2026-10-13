@@ -853,6 +853,7 @@ public class PlayerControl : MonoBehaviour
     }
     public void GetHeal(float heal)
     {
+        heal = Mathf.Clamp(heal, 0, _MaxHp - _Hp);
         _Hp += heal;
         hpBarController.UpdateHp(_Hp, _MaxHp);
         damageOrHealShow(heal, false);
@@ -885,7 +886,7 @@ public class PlayerControl : MonoBehaviour
         animator.SetTrigger("Death");
         HitBox.SetActive(false);
         gameObject.layer = LayerMask.NameToLayer("Nothing");
-        agent.ResetPath(); EnemyTarget = null; LootTarget = null; TalkTargetControl = null;
+        agent.ResetPath(); EnemyTarget = null; LootTarget = null; TalkTargetControl = null; InFight = false;
         Debug.Log("Player died!");
         cursorController.RemoveFromMainTeam(this);
         if (cursorController.selectedTeam.Contains(this))
