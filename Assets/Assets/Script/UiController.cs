@@ -92,7 +92,7 @@ public class UiController : MonoBehaviour
 
     [Header("Quest Menu")]
     [SerializeField] private GameObject questsMenu;
-    [SerializeField] private Quest[] questsAll;
+    [SerializeField] public Quest[] questsAll;
     [SerializeField] private TextMeshProUGUI questTitleText;
     [SerializeField] private TextMeshProUGUI questProgressText;
     [SerializeField] private TextMeshProUGUI questDescriptionText;
@@ -102,7 +102,7 @@ public class UiController : MonoBehaviour
     [SerializeField] private UnityEngine.UI.Button[] questButtons;
 
     private List<Quest> activeQuests = new List<Quest>();
-    private List<Quest> completedQuests = new List<Quest>();
+    public List<Quest> completedQuests = new List<Quest>();
 
 
     [Header("Map Menu")]

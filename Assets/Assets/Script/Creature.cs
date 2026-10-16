@@ -20,6 +20,14 @@ public class Creature : MonoBehaviour
 {
     [SerializeField] private bool Dummy;
     //Stats
+    [SerializeField] private SpriteRenderer mapCreatureImage; //Quest image info,,,
+    [SerializeField] private Sprite mapQuestAvableSprite;
+    [SerializeField] private Sprite mapEnemySprite;
+    [SerializeField] private Sprite mapFriendSprite;
+    [SerializeField] private Quest[] allQuests;
+    [SerializeField] private int[] questsDialogIdexes;
+
+
     [Header("Serialize")]
     [SerializeField] private Rigidbody rb;
     [SerializeField] private Animator animator;//speed(float) InFight(bool) MeleAttack(float) CastSpell(float) BowAttack(float) Death(bool)
@@ -155,6 +163,46 @@ public class Creature : MonoBehaviour
         hpBarController.UpdateStamina(currentStamina, maxStamina);
         hpBarController.UpdateHp(hp, maxHp);
             
+    }
+    public void mapImageCheck()
+    {
+        if (isFriend && canTalk)
+        {
+            bool fl = false;
+            foreach (Quest quests in allQuests)
+            {
+                if (!quests.isActive && !quests.isCompleted)
+                {
+                    if (quests.neededQuests.Length > 0)
+                    {
+                        foreach (Quest neededQuest in quests.neededQuests)
+                        {
+                            if (!cursorController.uiControl.questsAll.Contains(neededQuest))
+                            {
+                                break;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        fl = true;
+                        break;
+                    }
+                }
+            }
+            if (fl)
+            {
+                mapCreatureImage.sprite = mapQuestAvableSprite;
+            }
+        }
+        else if (isEnemy)
+        {
+            mapCreatureImage.sprite = mapEnemySprite;
+        }
+        else if (isFriend)
+        {
+            mapCreatureImage.sprite = mapFriendSprite;
+        }
     }
     //attack
     private void Actions()

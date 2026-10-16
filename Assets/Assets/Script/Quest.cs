@@ -16,4 +16,5 @@ public class Quest : MonoBehaviour
 
     public Item[] reward;
 
+    public Quest[] neededQuests;
 }
