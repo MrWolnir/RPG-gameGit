@@ -17,7 +17,7 @@ public class DialogControl : MonoBehaviour
         public UnityEvent[] events;
     }
 
-    
+    public int currentChatIndex;
     public StringArray[] Answers; //what player answer
     [Header("0-continue 1-leave 2-fight 3-buy 4-take quest")]
     public EventsArray[] Actions; //0-continue 1-leave 2-fight 3-buy 4-take quest

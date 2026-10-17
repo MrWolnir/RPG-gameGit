@@ -137,7 +137,7 @@ public class Creature : MonoBehaviour
     {
         animator.SetBool("Sword", true);
         updateSpells();
-
+        mapImageCheck();
 
 
     }
@@ -169,13 +169,13 @@ public class Creature : MonoBehaviour
         if (isFriend && canTalk)
         {
             bool fl = false;
-            foreach (Quest quests in allQuests)
+            for (int i = 0; i <= allQuests.Length; i++)
             {
-                if (!quests.isActive && !quests.isCompleted)
+                if (!allQuests[i].isActive && !allQuests[i].isCompleted)
                 {
-                    if (quests.neededQuests.Length > 0)
+                    if (allQuests[i].neededQuests.Length > 0)
                     {
-                        foreach (Quest neededQuest in quests.neededQuests)
+                        foreach (Quest neededQuest in allQuests[i].neededQuests)
                         {
                             if (!cursorController.uiControl.questsAll.Contains(neededQuest))
                             {
@@ -185,6 +185,7 @@ public class Creature : MonoBehaviour
                     }
                     else
                     {
+                        dialogControl.currentChatIndex = questsDialogIdexes[i];
                         fl = true;
                         break;
                     }

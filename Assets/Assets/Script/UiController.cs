@@ -470,10 +470,11 @@ public class UiController : MonoBehaviour
         inGameUi.SetActive(true);
         talkCreature = null;
     }
-    public void dialogQuestActivate(Quest quest)
+    public void dialogQuestActivate(Quest quest, Creature cr)
     {
         quest.isActive = true;
         showTextInfo("Quest received");
+        cr.mapImageCheck();
     }
     public void dialogStartFight()
     {
@@ -490,7 +491,7 @@ public class UiController : MonoBehaviour
     //
     public void OpenDialog(Creature creature)
     {
-        dialogIndex = 0;
+        dialogIndex = creature.dialogControl.currentChatIndex;
         DialogActions(creature);
         dialogMenu.SetActive(true);
         //inGameUi.SetActive(false);
